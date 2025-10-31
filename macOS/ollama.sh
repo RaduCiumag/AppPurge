@@ -7,49 +7,73 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+# Utilities
+log() {
+    echo -e "${BLUE}macOS / Ollama${NC} > ${1}"
+}
+success() {
+    echo -e "${BLUE}macOS / Ollama${NC} > ${GREEN}${1}${NC}"
+}
+warning() {
+    echo -e "${BLUE}macOS / Ollama${NC} > ${YELLOW}${1}${NC}"
+}
+error() {
+    echo -e "${BLUE}macOS / Ollama${NC} > ${RED}${1}${NC}"
+}
+safe_kill() {
+    local pattern="$1"
+    local process_count=$(pgrep -f "$pattern" | wc -l)
+    if [[ $process_count -gt 0 ]]; then
+        log "Stopping processes with pattern: '$pattern'"
+        pkill -f "$pattern" 2>/dev/null || true
+    fi
+}
+safe_remove() {
+    local path="$1"
+    if [[ -e "$path" ]]; then
+        rm -rf "$path" 2>/dev/null || {
+            error "Failed to remove '$path'. Please check permissions."
+            return 1
+        }
+        success "Successfully removed '$path'!"
+    fi
+}
+
 # Do work
-LOG_PREFIX=${BLUE}'macOS / Ollama >'${NC}
-
-echo -e "${LOG_PREFIX} ${YELLOW}Ollama removal started ...${NC}"
-
-echo -e "${LOG_PREFIX} Stopping Ollama processes ..."
-pkill -f ollama || true
-killall Ollama 2>/dev/null || true
-
-echo -e "${LOG_PREFIX} Uninstalling using Homebrew ..."
-if command -v brew &> /dev/null; then
-    brew uninstall ollama 2>/dev/null || true
-    brew untap ollama/tap 2>/dev/null || true
+if [[ "$OSTYPE" != "darwin"* ]]; then
+    error "This script is intended for macOS systems only."
+    exit 1
 fi
 
-echo -e "${LOG_PREFIX} Cleaning Ollama application ..."
-if [ -d "/Applications/Ollama.app" ]; then
-    rm -rf /Applications/Ollama.app 2>/dev/null || true
-fi
-if [ -d "~/Applications/Ollama.app" ]; then
-    rm -rf ~/Applications/Ollama.app 2>/dev/null || true
-fi
-if [ -f "/usr/local/bin/ollama" ]; then
-    rm -f /usr/local/bin/ollama 2>/dev/null || true
+log "Ollama removal started ..."
+
+safe_kill "ollama"
+safe_kill "Ollama"
+
+if command -v brew &>/dev/null; then
+    if brew list | grep -q ollama; then
+        log "Ollama found in Homebrew, uninstalling..."
+        brew uninstall ollama 2>/dev/null || true
+        brew untap ollama/tap 2>/dev/null || true
+    fi
 fi
 
-echo -e "${LOG_PREFIX} Cleaning Ollama data directories ..."
-if [ -d "~/.ollama" ]; then
-    rm -rf ~/.ollama 2>/dev/null || true
-fi
-if [ -d "~/Library/Application Support/Ollama" ]; then
-    rm -rf ~/Library/Application\ Support/Ollama 2>/dev/null || true
-fi
-if [ -d "~/Library/Caches/ollama" ]; then
-    rm -rf ~/Library/Caches/ollama 2>/dev/null || true
-fi
-if [ -d "~/Library/Caches/com.electron.ollama" ]; then
-    rm -rf ~/Library/Caches/com.electron.ollama 2>/dev/null || true
+clean_dirs=(
+    "/Applications/Ollama.app"
+    "/usr/local/bin/ollama"
+    "$HOME/Applications/Ollama.app"
+    "$HOME/.ollama"
+    "$HOME/Library/Application Support/Ollama"
+    "$HOME/Library/Caches/ollama"
+    "$HOME/Library/Caches/com.electron.ollama"
+    "$HOME/Library/Preferences/com.electron.ollama.plist"
+)
+for clean_dir in "${clean_dirs[@]}"; do
+    safe_remove "$clean_dir"
+done
+
+if pgrep -f "ollama" > /dev/null; then
+    warning "Some Ollama processes still running. Please restart your terminal or system."
 fi
 
-echo -e "${LOG_PREFIX} Cleaning Ollama preferences ..."
-if [ -d "~/Library/Preferences/com.electron.ollama.plist" ]; then
-    rm -f ~/Library/Preferences/com.electron.ollama.plist 2>/dev/null || true
-fi
-
-echo -e "${LOG_PREFIX} ${GREEN}Ollama removal complete!${NC}"
+success "${GREEN}Ollama removal complete!${NC}"
