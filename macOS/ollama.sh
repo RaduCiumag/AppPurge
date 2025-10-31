@@ -23,21 +23,33 @@ if command -v brew &> /dev/null; then
 fi
 
 echo -e "${LOG_PREFIX} Cleaning Ollama application ..."
-rm -rf /Applications/Ollama.app 2>/dev/null || true
-rm -rf ~/Applications/Ollama.app 2>/dev/null || true
-rm -rf ~/.Trash/Ollama.app 2>/dev/null || true
-rm -f /usr/local/bin/ollama 2>/dev/null || true
+if [ -d "/Applications/Ollama.app" ]; then
+    rm -rf /Applications/Ollama.app 2>/dev/null || true
+fi
+if [ -d "~/Applications/Ollama.app" ]; then
+    rm -rf ~/Applications/Ollama.app 2>/dev/null || true
+fi
+if [ -f "/usr/local/bin/ollama" ]; then
+    rm -f /usr/local/bin/ollama 2>/dev/null || true
+fi
 
 echo -e "${LOG_PREFIX} Cleaning Ollama data directories ..."
-rm -rf ~/.ollama 2>/dev/null || true
-rm -rf ~/Library/Application\ Support/Ollama 2>/dev/null || true
-rm -rf ~/Library/Caches/ollama 2>/dev/null || true
-rm -rf ~/Library/Caches/com.electron.ollama 2>/dev/null || true
+if [ -d "~/.ollama" ]; then
+    rm -rf ~/.ollama 2>/dev/null || true
+fi
+if [ -d "~/Library/Application Support/Ollama" ]; then
+    rm -rf ~/Library/Application\ Support/Ollama 2>/dev/null || true
+fi
+if [ -d "~/Library/Caches/ollama" ]; then
+    rm -rf ~/Library/Caches/ollama 2>/dev/null || true
+fi
+if [ -d "~/Library/Caches/com.electron.ollama" ]; then
+    rm -rf ~/Library/Caches/com.electron.ollama 2>/dev/null || true
+fi
 
 echo -e "${LOG_PREFIX} Cleaning Ollama preferences ..."
-rm -f ~/Library/Preferences/com.electron.ollama.plist 2>/dev/null || true
-
-echo -e "${LOG_PREFIX} Final cleanup ..."
-osascript -e 'tell application "Finder" to empty trash' 2>/dev/null || true
+if [ -d "~/Library/Preferences/com.electron.ollama.plist" ]; then
+    rm -f ~/Library/Preferences/com.electron.ollama.plist 2>/dev/null || true
+fi
 
 echo -e "${LOG_PREFIX} ${GREEN}Ollama removal complete!${NC}"
